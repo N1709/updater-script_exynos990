@@ -4,6 +4,8 @@ Updater-script and device files for flashing a ROM from a custom recovery.
 
 The flash flow is generic and can be used on any phone, but the updater-script has to be configured for each device. This repository ships a ready configuration for **Samsung Exynos 990** (Galaxy S20 series), with one zip, one system and one vendor base for all three phones.
 
+This is a shared-vendor setup: one vendor base is installed on every device and the per-device files are copied over it. It is closer to a vendor port than to a stock vendor for each phone.
+
 > **Status:** work in progress. Expect changes while testing continues.
 
 ## Included configuration
@@ -16,13 +18,25 @@ The flash flow is generic and can be used on any phone, but the updater-script h
 
 Detection uses `ro.boot.em.model`. Any other model aborts with `E3004`.
 
+The 4G models (G980F and G985F) use `dtbo_lte.img`. The 5G models (G981B and G986B) and the S20 Ultra use `dtbo.img`.
+
+The 4G models use their own dtbo image, the 5G models use the default one:
+
+| Codename | `dtbo_lte.img` | `dtbo.img` |
+|---|---|---|
+| `x1s` | SM-G980F | SM-G981B |
+| `y2s` | SM-G985F | SM-G986B |
+| `z3s` | not used | SM-G988B |
+
+Each `device/<codename>/system/` folder needs `boot.img`, `dtbo.img`, `odm.img` and `up_param.bin`, plus `dtbo_lte.img` for `x1s` and `y2s`.
+
 ## How it works
 
 1. Checks the device model.
 2. Rebuilds the dynamic partition table from `system/dynamic_partitions_op_list` and `unsparse_super_empty.img`.
 3. Flashes `system`, `vendor` and `product` with `block_image_update` on the mapped logical partitions.
 4. Mounts `vendor` read-write and extracts `device/<codename>/vendor` over it.
-5. Writes `odm` to its logical partition, then `dtbo`, `boot` and `up_param` to their block devices.
+5. Writes `odm` to its logical partition, then the matching `dtbo` (LTE or 5G), `boot` and `up_param` to their block devices.
 6. Sets metadata on `/vendor/firmware` and unmounts `vendor`.
 
 ## Using it on other devices
@@ -140,10 +154,27 @@ If the install fails, pull the log from recovery and check the last lines:
 adb pull /tmp/recovery.log
 ```
 
+## Troubleshooting
+
+This repository is a base, not a guaranteed plug-and-play package. If the device bootloops, hangs on the logo or loses features such as camera, audio, sensors or NFC, you will probably need to configure the script and the vendor for your build:
+
+- **updater-script:** check the device detection, the image names and paths, the partition list and the block device paths. A missing file in `package_extract_file` or `package_extract_dir` does not abort the install, so the flash can finish while a partition was never written.
+- **Vendor:** the vendor base and the `device/<codename>/vendor` overlay must match your ROM. Missing or mismatched blobs, firmware or libraries are the most common cause of bootloops and broken hardware. Update the overlay files and check their SELinux labels. `/vendor/firmware` is relabeled by the script, other folders may need the same.
+- **dynamic_partitions_op_list:** every partition you flash must be declared, and the total size must fit the group and the `super` partition.
+- **boot, dtbo and odm:** make sure each device uses its own images, and the right dtbo for its model.
+
+To find the cause, check the recovery log after flashing and the kernel log after a failed boot:
+
+```
+adb pull /tmp/recovery.log
+adb shell cat /proc/last_kmsg
+```
+
 ## Warning
 
 This script writes to `boot`, `dtbo`, `up_param` and the `super` partition. Keep stock firmware and Odin ready to restore the device. You flash this at your own risk.
 
 ## Credits
 
-- Structure reference from the Exynos 8895 updater-script by @nnhglong - telegram.
+- Structure reference from the Exynos 8895 updater-script by @nnhglong.
+- [Android-Artisan](https://github.com/Android-Artisan), for the kernel and other device files.
