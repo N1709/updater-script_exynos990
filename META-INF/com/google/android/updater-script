@@ -1,0 +1,95 @@
+assert(is_substring("G980", getprop("ro.boot.em.model")) ||
+    is_substring("G981", getprop("ro.boot.em.model")) ||
+    is_substring("G985", getprop("ro.boot.em.model")) ||
+    is_substring("G986", getprop("ro.boot.em.model")) ||
+    is_substring("G988", getprop("ro.boot.em.model")) ||
+    abort("E3004: This device is not supported."););
+
+ui_print(" ");
+ui_print("****************************************************");
+ui_print("Updater Script Test for Exynos 990 devices");
+ui_print("Galaxy S20 | S20+ | S20 Ultra");
+ui_print("One vendor, one system for 3 phones");
+ui_print("****************************************************");
+
+set_progress(0.00);
+
+ui_print("* Updating dynamic partitions...");
+assert(update_dynamic_partitions(package_extract_file("system/dynamic_partitions_op_list"), package_extract_file("system/unsparse_super_empty.img")));
+show_progress(0.100000, 0);
+
+ui_print("* Installing system partition...");
+show_progress(0.400000, 0);
+block_image_update(map_partition("system"), package_extract_file("system/system.transfer.list"), "system/system.new.dat.br", "system/system.patch.dat") ||
+  abort("E1001: Failed to update system image.");
+
+ui_print("* Installing vendor partition...");
+show_progress(0.150000, 0);
+block_image_update(map_partition("vendor"), package_extract_file("vendor/vendor.transfer.list"), "vendor/vendor.new.dat.br", "vendor/vendor.patch.dat") ||
+  abort("E2001: Failed to update vendor image.");
+
+ui_print("* Installing product partition...");
+show_progress(0.100000, 0);
+block_image_update(map_partition("product"), package_extract_file("system/product.transfer.list"), "system/product.new.dat.br", "system/product.patch.dat") ||
+  abort("E3001: Failed to update product image.");
+
+mount("ext4", "EMMC", map_partition("vendor"), "/vendor") ||
+  abort("E4001: Failed to mount vendor.");
+
+show_progress(0.100000, 0);
+if is_substring("G980", getprop("ro.boot.em.model")) || is_substring("G981", getprop("ro.boot.em.model")) then
+  ui_print("* Device: Galaxy S20 (x1s)");
+  ui_print("  -> Extracting device specific files..");
+  package_extract_dir("device/x1s/vendor", "/vendor");
+  ui_print("  -> Installing odm image..");
+  package_extract_file("device/x1s/system/odm.img", map_partition("odm"));
+  ui_print("  -> Installing dtbo image..");
+  if is_substring("G980", getprop("ro.boot.em.model")) then
+    package_extract_file("device/x1s/system/dtbo_lte.img", "/dev/block/by-name/dtbo");
+  else
+    package_extract_file("device/x1s/system/dtbo.img", "/dev/block/by-name/dtbo");
+  endif;
+  ui_print("  -> Installing boot image..");
+  package_extract_file("device/x1s/system/boot.img", "/dev/block/by-name/boot");
+  ui_print("  -> Installing up_param image..");
+  package_extract_file("device/x1s/system/up_param.bin", "/dev/block/by-name/up_param");
+endif;
+
+if is_substring("G985", getprop("ro.boot.em.model")) || is_substring("G986", getprop("ro.boot.em.model")) then
+  ui_print("* Device: Galaxy S20+ (y2s)");
+  ui_print("  -> Extracting device specific files..");
+  package_extract_dir("device/y2s/vendor", "/vendor");
+  ui_print("  -> Installing odm image..");
+  package_extract_file("device/y2s/system/odm.img", map_partition("odm"));
+  ui_print("  -> Installing dtbo image..");
+  if is_substring("G985", getprop("ro.boot.em.model")) then
+    package_extract_file("device/y2s/system/dtbo_lte.img", "/dev/block/by-name/dtbo");
+  else
+    package_extract_file("device/y2s/system/dtbo.img", "/dev/block/by-name/dtbo");
+  endif;
+  ui_print("  -> Installing boot image..");
+  package_extract_file("device/y2s/system/boot.img", "/dev/block/by-name/boot");
+  ui_print("  -> Installing up_param image..");
+  package_extract_file("device/y2s/system/up_param.bin", "/dev/block/by-name/up_param");
+endif;
+
+if is_substring("G988", getprop("ro.boot.em.model")) then
+  ui_print("* Device: Galaxy S20 Ultra (z3s)");
+  ui_print("  -> Extracting device specific files..");
+  package_extract_dir("device/z3s/vendor", "/vendor");
+  ui_print("  -> Installing odm image..");
+  package_extract_file("device/z3s/system/odm.img", map_partition("odm"));
+  ui_print("  -> Installing dtbo image..");
+  package_extract_file("device/z3s/system/dtbo.img", "/dev/block/by-name/dtbo");
+  ui_print("  -> Installing boot image..");
+  package_extract_file("device/z3s/system/boot.img", "/dev/block/by-name/boot");
+  ui_print("  -> Installing up_param image..");
+  package_extract_file("device/z3s/system/up_param.bin", "/dev/block/by-name/up_param");
+endif;
+
+show_progress(0.100000, 0);
+set_metadata_recursive("/vendor/firmware", "uid", 0, "gid", 0, "dmode", 0755, "fmode", 0644, "capabilities", 0x0, "selabel", "u:object_r:vendor_file:s0");
+unmount("/vendor");
+
+ui_print("The ROM has been installed successfully!");
+set_progress(1.000000);

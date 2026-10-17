@@ -1,0 +1,20 @@
+# Remove all existing dynamic partitions and groups before applying full OTA
+remove_all_groups
+# Add group group_basic with maximum size 9432989696
+add_group group_basic 9432989696
+# Add partition system to group group_basic
+add system group_basic
+# Add partition vendor to group group_basic
+add vendor group_basic
+# Add partition product to group group_basic
+add product group_basic
+# Add partition odm to group group_basic
+add odm group_basic
+# Grow partition system from 0 to 6313238528
+resize system 6313238528
+# Grow partition vendor from 0 to 1074520064
+resize vendor 1074520064
+# Grow partition product from 0 to 810643456
+resize product 810643456
+# Grow partition odm from 0 to 540672
+resize odm 540672
